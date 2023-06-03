@@ -585,20 +585,17 @@ class InpaintGenerator(BaseNetwork):
             dc_conv = 'dc_texture_{:d}'.format(_)  # dc_texture_7
 
             if _ == 3:
-                print(dc_texture.shape)
-                b, c, h, w = dc_texture.shape
                 dc_texture_512 = self.up_dim(dc_texture)
-                print(dc_texture_512.shape)
+                b, c, h, w = dc_texture_512.shape  # [12, 512, 32, 32]
                 tgt = dc_texture_512.reshape(b, c, h * w).permute(2, 0, 1).contiguous()
                 # print(tgt.shape) [1024,12,512]
                 mem = self.kv.unsqueeze(dim=1).repeat(1, dc_texture.shape[0], 1).to(tgt.device)
-                # print(mem.shape)[1024,12,512]
+                # print(mem.shape) [1024,12,512]
                 attn_out, _ = self.attn(tgt, mem, mem)
+                # print(attn_out.shape) [1024,12,512] --> permute(1, 2, 0) --> [12,512,1024]
                 attn_out = attn_out.permute(1, 2, 0).reshape(dc_texture_512.shape)
                 attn_out_256 = self.down_dim(attn_out)
-                print(attn_out_256.shape)
                 dc_texture = dc_texture + attn_out_256
-                print(dc_texture.shape)
 
             dc_texture = F.interpolate(dc_texture, scale_factor=2, mode='bilinear')  # dc_texture 4x4
             dc_tecture_mask = F.interpolate(dc_tecture_mask, scale_factor=2, mode='nearest')  # dc_tecture_mask 4x4
