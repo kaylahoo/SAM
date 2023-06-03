@@ -460,7 +460,7 @@ class InpaintGenerator(BaseNetwork):
         if init_weights:
             self.init_weights()
 
-        path = "/home/lab265/8T/liulu/SAA/checkpoints/ffhq/InpaintingModel1_gen.pth"
+        path = "/home/lab265/8T/liulu/SAA-paris/checkpoints/psv/InpaintingModel_gen.pth"
         # "/home/lab265/lab265/lab508_8T/liulu/SAA/checkpoints/ffhq/InpaintingModel_gen.pth"
         self.content_codec = InpaintGenerator1(ckpt_path=path, trainable=False)
         self.kv = self.content_codec.quantize.get_codebook()['default']['code']
