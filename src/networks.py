@@ -451,11 +451,11 @@ class InpaintGenerator(BaseNetwork):
         if init_weights:
             self.init_weights()
 
-        # path ="/home/lab265/8T/liulu/SAA-paris/checkpoints/psv/InpaintingModel_gen.pth"
-        # #"/home/lab265/lab265/lab508_8T/liulu/SAA/checkpoints/ffhq/InpaintingModel_gen.pth"
-        # self.content_codec = InpaintGenerator(ckpt_path=path, trainable=False)
-        # self.kv = self.content_codec.quantize.get_codebook()['default']['code']
-        # self.attn = nn.MultiheadAttention(embed_dim=512, num_heads=8)
+        path ="/home/lab265/8T/liulu/SAA-paris/checkpoints/psv/InpaintingModel_gen.pth"
+        #"/home/lab265/lab265/lab508_8T/liulu/SAA/checkpoints/ffhq/InpaintingModel_gen.pth"
+        self.content_codec = InpaintGenerator(ckpt_path=path, trainable=False)
+        self.kv = self.content_codec.quantize.get_codebook()['default']['code']
+        self.attn = nn.MultiheadAttention(embed_dim=512, num_heads=8)
 
 
 
@@ -570,6 +570,20 @@ class InpaintGenerator(BaseNetwork):
             ec_texture_skip = 'ec_t_{:d}'.format(_ - 1)  # ec_t_6
             ec_texture_masks_skip = 'ec_t_masks_{:d}'.format(_ - 1)  # ec_t_masks_6
             dc_conv = 'dc_texture_{:d}'.format(_)  # dc_texture_7
+
+            if _ == 3:
+                print(dc_texture.shape)
+                b, c, h, w = dc_texture.shape
+                tgt = dc_texture.reshape(b, c, h * w).permute(2, 0, 1).contiguous()
+                # # #print(tgt.shape) [1024,12,512]
+                mem = self.kv.unsqueeze(dim=1).repeat(1, dc_texture.shape[0], 1).to(tgt.device)
+                # print(mem.shape)[1024,12,512]
+                attn_out, _ = self.attn(tgt, mem, mem)
+                attn_out = attn_out.permute(1, 2, 0).reshape(dc_texture.shape)
+                print(attn_out.shape)
+                dc_texture = dc_texture + attn_out
+                print(dc_texture.shape)
+
 
             dc_texture = F.interpolate(dc_texture, scale_factor=2, mode='bilinear')  # dc_texture 4x4
             dc_tecture_mask = F.interpolate(dc_tecture_mask, scale_factor=2, mode='nearest')  # dc_tecture_mask 4x4
