@@ -588,6 +588,7 @@ class InpaintGenerator(BaseNetwork):
                 print(dc_texture.shape)
                 b, c, h, w = dc_texture.shape
                 dc_texture_512 = self.up_dim(dc_texture)
+                print(dc_texture_512.shape)
                 tgt = dc_texture_512.reshape(b, c, h * w).permute(2, 0, 1).contiguous()
                 # print(tgt.shape) [1024,12,512]
                 mem = self.kv.unsqueeze(dim=1).repeat(1, dc_texture.shape[0], 1).to(tgt.device)
