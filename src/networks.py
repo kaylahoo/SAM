@@ -14,7 +14,7 @@ from image_synthesis.modeling.utils.misc import distributed_sinkhorn, get_token_
 from image_synthesis.distributed.distributed import all_reduce, get_world_size
 from image_synthesis.modeling.modules.edge_connect.losses import EdgeConnectLoss
 from image_synthesis.modeling.utils.position_encoding import build_position_encoding
-
+import math
 
 # from timm.models.layers import DropPath
 
@@ -558,6 +558,19 @@ class InpaintGenerator(BaseNetwork):
         # print('t22', ec_textures['ec_t_masks_2'].shape)#[2,128,64,64]
         ec_textures['ec_t_3'], ec_textures['ec_t_masks_3'] = self.ec_texture_3(ec_textures['ec_t_2'],
                                                                                ec_textures['ec_t_masks_2'])
+        # Code book 语义替换
+        dc_texture_512 = self.up_dim(ec_textures['ec_t_3'])  # ec_textures['ec_t_3'] #[2,256,32,32]
+        b, c, h, w = dc_texture_512.shape  # [2, 512, 32, 32]
+        tgt = dc_texture_512.reshape(b, c, h * w).permute(2, 0, 1).contiguous()
+        # print(tgt.shape) [1024,2,512]
+        mem = self.kv.unsqueeze(dim=1).repeat(1, ec_textures['ec_t_3'].shape[0], 1).to(tgt.device)
+        # print(mem.shape) [1024,2,512]
+        attn_out, _ = self.attn(tgt, mem, mem)
+        # print(attn_out.shape) [1024,2,512] --> permute(1, 2, 0) --> [2,512,1024]
+        attn_out = attn_out.permute(1, 2, 0).reshape(dc_texture_512.shape)
+        attn_out_256 = self.down_dim(attn_out)
+        ec_textures['ec_t_3'] = ec_textures['ec_t_3'] + attn_out_256
+
         # print('t33', ec_textures['ec_t_3'].shape)#[2,256,32,32]
         # print('t33', ec_textures['ec_t_masks_3'].shape)#[2,256,32,32]
         ec_textures['ec_t_4'], ec_textures['ec_t_masks_4'] = self.ec_texture_4(ec_textures['ec_t_3'],
@@ -579,24 +592,9 @@ class InpaintGenerator(BaseNetwork):
         dc_texture, dc_tecture_mask = ec_textures['ec_t_7'], ec_textures['ec_t_masks_7']
 
         for _ in range(7, 0, -1):
-
             ec_texture_skip = 'ec_t_{:d}'.format(_ - 1)  # ec_t_6
             ec_texture_masks_skip = 'ec_t_masks_{:d}'.format(_ - 1)  # ec_t_masks_6
             dc_conv = 'dc_texture_{:d}'.format(_)  # dc_texture_7
-
-            if _ == 3:
-                dc_texture_512 = self.up_dim(dc_texture)
-                b, c, h, w = dc_texture_512.shape  # [12, 512, 32, 32]
-                tgt = dc_texture_512.reshape(b, c, h * w).permute(2, 0, 1).contiguous()
-                # print(tgt.shape) [1024,12,512]
-                mem = self.kv.unsqueeze(dim=1).repeat(1, dc_texture.shape[0], 1).to(tgt.device)
-                # print(mem.shape) [1024,12,512]
-                attn_out, _ = self.attn(tgt, mem, mem)
-                # print(attn_out.shape) [1024,12,512] --> permute(1, 2, 0) --> [12,512,1024]
-                attn_out = attn_out.permute(1, 2, 0).reshape(dc_texture_512.shape)
-                attn_out_256 = self.down_dim(attn_out)
-                dc_texture = dc_texture + attn_out_256
-
             dc_texture = F.interpolate(dc_texture, scale_factor=2, mode='bilinear')  # dc_texture 4x4
             dc_tecture_mask = F.interpolate(dc_tecture_mask, scale_factor=2, mode='nearest')  # dc_tecture_mask 4x4
 

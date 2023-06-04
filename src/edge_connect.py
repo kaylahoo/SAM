@@ -23,7 +23,7 @@ class EdgeConnect():
 
         self.debug = False
         self.model_name = model_name
-        #self.edge_model = EdgeModel(config).to(config.DEVICE)
+        # self.edge_model = EdgeModel(config).to(config.DEVICE)
         self.inpaint_model = InpaintingModel(config).to(config.DEVICE)
 
         self.psnr = PSNR(255.0).to(config.DEVICE)
@@ -31,10 +31,13 @@ class EdgeConnect():
 
         # test mode
         if self.config.MODE == 2:
-            self.test_dataset = Dataset(config, config.TEST_FLIST, config.TEST_MASK_FLIST, augment=False, training=False,mask_reverse=True)
+            self.test_dataset = Dataset(config, config.TEST_FLIST, config.TEST_MASK_FLIST, augment=False,
+                                        training=False, mask_reverse=True)
         else:
-            self.train_dataset = Dataset(config, config.TRAIN_FLIST, config.TRAIN_MASK_FLIST, augment=True, training=True,mask_reverse=True)
-            self.val_dataset = Dataset(config, config.VAL_FLIST, config.VAL_MASK_FLIST, augment=False, training=True,mask_reverse=True)
+            self.train_dataset = Dataset(config, config.TRAIN_FLIST, config.TRAIN_MASK_FLIST, augment=True,
+                                         training=True, mask_reverse=True)
+            self.val_dataset = Dataset(config, config.VAL_FLIST, config.VAL_MASK_FLIST, augment=False, training=True,
+                                       mask_reverse=True)
             self.sample_iterator = self.val_dataset.create_iterator(config.SAMPLE_SIZE)
 
         self.samples_path = os.path.join(config.PATH, 'samples')
@@ -48,27 +51,27 @@ class EdgeConnect():
 
         self.log_file = os.path.join(config.PATH, 'log_' + model_name + '.dat')
 
-    def load(self):#   改动了
-        #if self.config.MODEL == 1:
-            #self.edge_model.load()
+    def load(self):  # 改动了
+        # if self.config.MODEL == 1:
+        # self.edge_model.load()
 
-        #elif self.config.MODEL == 2:
+        # elif self.config.MODEL == 2:
         self.inpaint_model.load()
 
-        #else:
-            #self.edge_model.load()
-            #self.inpaint_model.load()
+        # else:
+        # self.edge_model.load()
+        # self.inpaint_model.load()
 
     def save(self):
-        #if self.config.MODEL == 1:
-            #self.edge_model.save()
+        # if self.config.MODEL == 1:
+        # self.edge_model.save()
 
-        #elif self.config.MODEL == 2 or self.config.MODEL == 3:
+        # elif self.config.MODEL == 2 or self.config.MODEL == 3:
         self.inpaint_model.save()
 
-        #else:
-            #self.edge_model.save()
-            #self.inpaint_model.save()
+        # else:
+        # self.edge_model.save()
+        # self.inpaint_model.save()
 
     def train(self):
         train_loader = DataLoader(
@@ -89,38 +92,37 @@ class EdgeConnect():
             print('No training data was provided! Check \'TRAIN_FLIST\' value in the configuration file.')
             return
 
-        while(keep_training):
+        while (keep_training):
             epoch += 1
             print('\n\nTraining epoch: %d' % epoch)
 
             progbar = Progbar(total, width=20, stateful_metrics=['epoch', 'iter'])
 
             for items in train_loader:
-                #self.edge_model.train()#改动 去掉了
+                # self.edge_model.train()#改动 去掉了
                 self.inpaint_model.train()
 
-                images,masks = self.cuda(*items)
+                images, masks = self.cuda(*items)
 
                 # edge model
-                #if model == 1:#改动 去掉了
-                    # # train
-                    # outputs, gen_loss, dis_loss, logs = self.edge_model.process(images_gray, edges, masks)
-                    #
-                    # # metrics
-                    # precision, recall = self.edgeacc(edges * masks, outputs * masks)
-                    # logs.append(('precision', precision.item()))
-                    # logs.append(('recall', recall.item()))
-                    #
-                    # # backward
-                    # self.edge_model.backward(gen_loss, dis_loss)
-                    # iteration = self.edge_model.iteration
-
+                # if model == 1:#改动 去掉了
+                # # train
+                # outputs, gen_loss, dis_loss, logs = self.edge_model.process(images_gray, edges, masks)
+                #
+                # # metrics
+                # precision, recall = self.edgeacc(edges * masks, outputs * masks)
+                # logs.append(('precision', precision.item()))
+                # logs.append(('recall', recall.item()))
+                #
+                # # backward
+                # self.edge_model.backward(gen_loss, dis_loss)
+                # iteration = self.edge_model.iteration
 
                 # inpaint model
                 if model == 2:
                     # train
                     outputs, gen_loss, dis_loss, logs = self.inpaint_model.process(images, masks)
-                    #outputs_merged = (outputs * masks) + (images * (1 - masks))
+                    # outputs_merged = (outputs * masks) + (images * (1 - masks))
                     outputs_merged = (outputs * (1 - masks)) + (images * masks)
 
                     # metrics
@@ -132,7 +134,6 @@ class EdgeConnect():
                     # backward
                     self.inpaint_model.backward(gen_loss, dis_loss)
                     iteration = self.inpaint_model.iteration
-
 
                 # # inpaint with edge model
                 # elif model == 3:
@@ -180,17 +181,17 @@ class EdgeConnect():
                 #     self.edge_model.backward(e_gen_loss, e_dis_loss)
                 #     iteration = self.inpaint_model.iteration
 
-
                 if iteration >= max_iteration:
                     keep_training = False
                     break
 
                 logs = [
-                    ("epoch", epoch),
-                    ("iter", iteration),
-                ] + logs
+                           ("epoch", epoch),
+                           ("iter", iteration),
+                       ] + logs
 
-                progbar.add(len(images), values=logs if self.config.VERBOSE else [x for x in logs if not x[0].startswith('l_')])
+                progbar.add(len(images),
+                            values=logs if self.config.VERBOSE else [x for x in logs if not x[0].startswith('l_')])
 
                 # log model at checkpoints
                 if self.config.LOG_INTERVAL and iteration % self.config.LOG_INTERVAL == 0:
@@ -222,7 +223,7 @@ class EdgeConnect():
         model = self.config.MODEL
         total = len(self.val_dataset)
 
-        #self.edge_model.eval()
+        # self.edge_model.eval()
         self.inpaint_model.eval()
 
         progbar = Progbar(total, width=20, stateful_metrics=['it'])
@@ -230,7 +231,7 @@ class EdgeConnect():
 
         for items in val_loader:
             iteration += 1
-            #images, images_gray, edges, masks = self.cuda(*items)
+            # images, images_gray, edges, masks = self.cuda(*items)
             images, masks = self.cuda(*items)
 
             # # edge model
@@ -243,7 +244,6 @@ class EdgeConnect():
             #     logs.append(('precision', precision.item()))
             #     logs.append(('recall', recall.item()))
 
-
             # inpaint model
             if model == 2:
                 # eval
@@ -255,7 +255,6 @@ class EdgeConnect():
                 mae = (torch.sum(torch.abs(images - outputs_merged)) / torch.sum(images)).float()
                 logs.append(('psnr', psnr.item()))
                 logs.append(('mae', mae.item()))
-
 
             # # inpaint with edge model
             # elif model == 3:
@@ -291,12 +290,11 @@ class EdgeConnect():
             #     i_logs.append(('mae', mae.item()))
             #     logs = e_logs + i_logs
 
-
             logs = [("it", iteration), ] + logs
             progbar.add(len(images), values=logs)
 
     def test(self):
-        #self.edge_model.eval()
+        # self.edge_model.eval()
         self.inpaint_model.eval()
 
         model = self.config.MODEL
@@ -310,7 +308,7 @@ class EdgeConnect():
         index = 0
         for items in test_loader:
             name = self.test_dataset.load_name(index)
-            #images, images_gray, edges, masks = self.cuda(*items)
+            # images, images_gray, edges, masks = self.cuda(*items)
             images, masks = self.cuda(*items)
             index += 1
 
@@ -322,7 +320,7 @@ class EdgeConnect():
             # inpaint model
             if model == 2:
                 outputs = self.inpaint_model(images, masks)
-                #outputs_merged = (outputs * masks) + (images * (1 - masks))
+                # outputs_merged = (outputs * masks) + (images * (1 - masks))
                 outputs_merged = (outputs * (1 - masks)) + (images * masks)
 
             # # inpaint with edge model / joint model
@@ -333,7 +331,7 @@ class EdgeConnect():
 
             output = self.postprocess(outputs_merged)[0]
             path = os.path.join(self.results_path, name)
-            print(index,name)
+            print(index, name)
             imsave(output, path)
 
             create_dir(self.results_path + '_masked')
@@ -341,13 +339,12 @@ class EdgeConnect():
             path = os.path.join(self.results_path + '_masked', name)
             imsave(images_masked, path)
 
-
             if self.debug:
-                #edges = self.postprocess(1 - edges)[0]
+                # edges = self.postprocess(1 - edges)[0]
                 masked = self.postprocess(images * (1 - masks) + masks)[0]
                 fname, fext = name.split('.')
 
-                #imsave(edges, os.path.join(self.results_path, fname + '_edge.' + fext))
+                # imsave(edges, os.path.join(self.results_path, fname + '_edge.' + fext))
                 imsave(masked, os.path.join(self.results_path, fname + '_masked.' + fext))
 
         print('\nEnd test....')
@@ -357,12 +354,15 @@ class EdgeConnect():
         if len(self.val_dataset) == 0:
             return
 
-        #self.edge_model.eval()
+        # self.edge_model.eval()
         self.inpaint_model.eval()
+
+        num_params_model = (sum(p.numel() for p in self.inpaint_model.parameters()) / 1000000.0)
+        print('Total params_stu: {:.3f} M'.format(num_params_model))
 
         model = self.config.MODEL
         items = next(self.sample_iterator)
-        #images, images_gray, edges, masks = self.cuda(*items)
+        # images, images_gray, edges, masks = self.cuda(*items)
         images, masks = self.cuda(*items)
 
         # edge model
@@ -391,7 +391,7 @@ class EdgeConnect():
             iteration = self.inpaint_model.iteration
             inputs = (images * (1 - masks)) + masks
             outputs = self.inpaint_model(images, masks)
-            #outputs_merged = (outputs * masks) + (images * (1 - masks))
+            # outputs_merged = (outputs * masks) + (images * (1 - masks))
             outputs_merged = (outputs * (1 - masks)) + (images * masks)
 
         # inpaint with edge model / joint model
@@ -413,12 +413,11 @@ class EdgeConnect():
         images = stitch_images(
             self.postprocess(images),
             self.postprocess(inputs),
-            #self.postprocess(edges),
+            # self.postprocess(edges),
             self.postprocess(outputs),
             self.postprocess(outputs_merged),
-            img_per_row = image_per_row
+            img_per_row=image_per_row
         )
-
 
         path = os.path.join(self.samples_path, self.model_name)
         name = os.path.join(path, str(iteration).zfill(5) + ".png")

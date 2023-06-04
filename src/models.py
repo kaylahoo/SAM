@@ -258,6 +258,7 @@ class InpaintingModel(BaseModel):
 
         outputs = self.generator(inputs,masks)#inputs = 4
 
+
         #print('261',outputs.shape)
         return outputs
 
