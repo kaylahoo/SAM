@@ -559,17 +559,17 @@ class InpaintGenerator(BaseNetwork):
         ec_textures['ec_t_3'], ec_textures['ec_t_masks_3'] = self.ec_texture_3(ec_textures['ec_t_2'],
                                                                                ec_textures['ec_t_masks_2'])
         # Code book 语义替换
-        dc_texture_512 = self.up_dim(ec_textures['ec_t_3'])  # ec_textures['ec_t_3'] #[2,256,32,32]
-        b, c, h, w = dc_texture_512.shape  # [2, 512, 32, 32]
-        tgt = dc_texture_512.reshape(b, c, h * w).permute(2, 0, 1).contiguous()
-        # print(tgt.shape) [1024,2,512]
-        mem = self.kv.unsqueeze(dim=1).repeat(1, ec_textures['ec_t_3'].shape[0], 1).to(tgt.device)
-        # print(mem.shape) [1024,2,512]
-        attn_out, _ = self.attn(tgt, mem, mem)
-        # print(attn_out.shape) [1024,2,512] --> permute(1, 2, 0) --> [2,512,1024]
-        attn_out = attn_out.permute(1, 2, 0).reshape(dc_texture_512.shape)
-        attn_out_256 = self.down_dim(attn_out)
-        ec_textures['ec_t_3'] = ec_textures['ec_t_3'] + attn_out_256
+        # dc_texture_512 = self.up_dim(ec_textures['ec_t_3'])  # ec_textures['ec_t_3'] #[2,256,32,32]
+        # b, c, h, w = dc_texture_512.shape  # [2, 512, 32, 32]
+        # tgt = dc_texture_512.reshape(b, c, h * w).permute(2, 0, 1).contiguous()
+        # # print(tgt.shape) [1024,2,512]
+        # mem = self.kv.unsqueeze(dim=1).repeat(1, ec_textures['ec_t_3'].shape[0], 1).to(tgt.device)
+        # # print(mem.shape) [1024,2,512]
+        # attn_out, _ = self.attn(tgt, mem, mem)
+        # # print(attn_out.shape) [1024,2,512] --> permute(1, 2, 0) --> [2,512,1024]
+        # attn_out = attn_out.permute(1, 2, 0).reshape(dc_texture_512.shape)
+        # attn_out_256 = self.down_dim(attn_out)
+        # ec_textures['ec_t_3'] = ec_textures['ec_t_3'] + attn_out_256
 
         # print('t33', ec_textures['ec_t_3'].shape)#[2,256,32,32]
         # print('t33', ec_textures['ec_t_masks_3'].shape)#[2,256,32,32]
